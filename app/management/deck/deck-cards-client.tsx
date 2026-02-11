@@ -55,6 +55,7 @@ import {
   aiFlashcardsSchema,
   generateFlashcards,
 } from "@/services/ai.service";
+import { useAiDraftSessionsStore } from "@/stores/useAiDraftSessionsStore";
 import { useCardsStore } from "@/stores/useCardsStore";
 import { useDecksStore } from "@/stores/useDecksStore";
 
@@ -71,6 +72,8 @@ interface BulkCardInput {
   front: string;
   back: string;
 }
+
+const EMPTY_AI_DRAFTS: AIDraftCard[] = [];
 
 function previewMarkdown(content: string): string {
   const compact = content.replace(/\s+/g, " ").trim();
@@ -148,15 +151,20 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
   const createCard = useCardsStore((state) => state.createCard);
   const updateCard = useCardsStore((state) => state.updateCard);
   const deleteCard = useCardsStore((state) => state.deleteCard);
+  const aiSessionsHydrated = useAiDraftSessionsStore((state) => state.hasHydrated);
+  const aiSession = useAiDraftSessionsStore((state) => state.sessions[deckId]);
+  const setDeckWordsRaw = useAiDraftSessionsStore((state) => state.setDeckWordsRaw);
+  const setDeckStyle = useAiDraftSessionsStore((state) => state.setDeckStyle);
+  const appendDeckDrafts = useAiDraftSessionsStore((state) => state.appendDeckDrafts);
+  const updateDeckDraft = useAiDraftSessionsStore((state) => state.updateDeckDraft);
+  const removeDeckDraft = useAiDraftSessionsStore((state) => state.removeDeckDraft);
+  const clearDeckDrafts = useAiDraftSessionsStore((state) => state.clearDeckDrafts);
 
   const [bulkRaw, setBulkRaw] = useState("");
   const [bulkResult, setBulkResult] = useState("");
 
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
-  const [aiWordsRaw, setAiWordsRaw] = useState("");
-  const [aiStyle, setAiStyle] = useState<AIDraftStyle>("Vocabulary");
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiDrafts, setAiDrafts] = useState<AIDraftCard[]>([]);
 
   const [draftDensity, setDraftDensity] = useState<DensityMode>("comfortable");
   const [approveAllOpen, setApproveAllOpen] = useState(false);
@@ -178,8 +186,11 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  const hydrated = decksHydrated && cardsHydrated;
+  const hydrated = decksHydrated && cardsHydrated && aiSessionsHydrated;
   const deck = decks.find((entry) => entry.id === deckId);
+  const aiWordsRaw = aiSession?.wordsRaw ?? "";
+  const aiStyle: AIDraftStyle = aiSession?.style ?? "Vocabulary";
+  const aiDrafts: AIDraftCard[] = aiSession?.drafts ?? EMPTY_AI_DRAFTS;
 
   const deckCards = useMemo(
     () =>
@@ -317,9 +328,9 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
         style: aiStyle,
       }));
 
-      setAiDrafts((current) => [...nextDrafts, ...current]);
+      appendDeckDrafts(deckId, nextDrafts);
       setAiDialogOpen(false);
-      setAiWordsRaw("");
+      setDeckWordsRaw(deckId, "");
       toast.success(`Generated ${nextDrafts.length} draft cards.`);
     } catch (error) {
       if (error instanceof AIServiceError) {
@@ -385,11 +396,7 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
       return;
     }
 
-    setAiDrafts((current) =>
-      current.map((draft) =>
-        draft.id === editingDraftId ? { ...draft, front: value } : draft,
-      ),
-    );
+    updateDeckDraft(deckId, editingDraftId, { front: value });
   };
 
   const handleDraftBackChange = (value: string) => {
@@ -399,11 +406,7 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
       return;
     }
 
-    setAiDrafts((current) =>
-      current.map((draft) =>
-        draft.id === editingDraftId ? { ...draft, back: value } : draft,
-      ),
-    );
+    updateDeckDraft(deckId, editingDraftId, { back: value });
   };
 
   const saveDraftEditor = () => {
@@ -419,11 +422,7 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
       return;
     }
 
-    setAiDrafts((current) =>
-      current.map((draft) =>
-        draft.id === editingDraftId ? { ...draft, front, back } : draft,
-      ),
-    );
+    updateDeckDraft(deckId, editingDraftId, { front, back });
     setDraftFrontValue(front);
     setDraftBackValue(back);
     setDraftBaselineFront(front);
@@ -432,7 +431,7 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
   };
 
   const discardDraft = (draftId: string) => {
-    setAiDrafts((current) => current.filter((draft) => draft.id !== draftId));
+    removeDeckDraft(deckId, draftId);
 
     if (editingDraftId === draftId) {
       closeDraftEditor();
@@ -469,7 +468,7 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
     }
 
     createCard({ deckId, front, back });
-    setAiDrafts((current) => current.filter((draft) => draft.id !== editingDraftId));
+    removeDeckDraft(deckId, editingDraftId);
     closeDraftEditor();
     toast.success("Draft approved and card created.");
   };
@@ -497,7 +496,7 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
     }
 
     const count = aiDrafts.length;
-    setAiDrafts([]);
+    clearDeckDrafts(deckId);
     setApproveAllOpen(false);
     closeDraftEditor();
     toast.success(`Approved ${count} drafts.`);
@@ -508,7 +507,7 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
       return;
     }
 
-    setAiDrafts([]);
+    clearDeckDrafts(deckId);
     closeDraftEditor();
     toast("Discarded all drafts.");
   };
@@ -528,7 +527,7 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
 
     const stamp = format(new Date(), "yyyy-MM-dd-HH-mm");
     const safeDeckName = toFileSafeName(deck.name) || "deck";
-    downloadJson(payload, `lexora-ai-drafts-${safeDeckName}-${stamp}.json`);
+    downloadJson(payload, `anki-ai-drafts-${safeDeckName}-${stamp}.json`);
     toast.success("Drafts exported as JSON.");
   };
 
@@ -724,7 +723,7 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
                 id="ai-words"
                 rows={10}
                 value={aiWordsRaw}
-                onChange={(event) => setAiWordsRaw(event.target.value)}
+                onChange={(event) => setDeckWordsRaw(deckId, event.target.value)}
                 placeholder={["abandon", "carry on", "garbage collector"].join("\n")}
               />
             </div>
@@ -733,7 +732,7 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
               <Label htmlFor="ai-style">Style</Label>
               <Select
                 value={aiStyle}
-                onValueChange={(value) => setAiStyle(value as AIDraftStyle)}
+                onValueChange={(value) => setDeckStyle(deckId, value as AIDraftStyle)}
               >
                 <SelectTrigger id="ai-style" className="w-full">
                   <SelectValue placeholder="Select style" />
