@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useRef, useState } from "react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 import {
   AlertDialog,
@@ -34,7 +35,6 @@ import {
   mergeFlashcardData,
   parseImportJson,
 } from "@/lib/export-import";
-import { FlashToast } from "@/components/ui/flash-toast";
 import { clearLexoraStorage } from "@/lib/storage";
 import { useCardsStore } from "@/stores/useCardsStore";
 import { useTopicsStore } from "@/stores/useTopicsStore";
@@ -59,22 +59,8 @@ export function AppHeader() {
   const resetCards = useCardsStore((state) => state.resetCards);
 
   const [resetOpen, setResetOpen] = useState(false);
-  const [toastOpen, setToastOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
 
   const hydrated = topicsHydrated && cardsHydrated;
-
-  useEffect(() => {
-    if (!toastOpen) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setToastOpen(false);
-    }, 2200);
-
-    return () => window.clearTimeout(timeout);
-  }, [toastOpen]);
 
   const handleExport = () => {
     if (!hydrated) {
@@ -84,8 +70,7 @@ export function AppHeader() {
     const payload = buildExportPayload(topics, cards);
     const stamp = format(new Date(), "yyyy-MM-dd-HH-mm");
     downloadJson(payload, `lexora-export-${stamp}.json`);
-    setToastMessage("Export file downloaded.");
-    setToastOpen(true);
+    toast.success("Export file downloaded.");
   };
 
   const handleOpenImport = () => {
@@ -109,15 +94,13 @@ export function AppHeader() {
 
       replaceTopics(merged.topics);
       replaceCards(merged.cards);
-      setToastMessage("Import completed and merged successfully.");
-      setToastOpen(true);
+      toast.success("Import completed and merged successfully.");
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : "Import failed. Please check your JSON file.";
-      setToastMessage(message);
-      setToastOpen(true);
+      toast.error(message);
     } finally {
       event.target.value = "";
     }
@@ -128,8 +111,7 @@ export function AppHeader() {
     resetCards();
     await clearLexoraStorage();
     setResetOpen(false);
-    setToastMessage("All local data has been reset.");
-    setToastOpen(true);
+    toast.success("All local data has been reset.");
   };
 
   return (
@@ -241,12 +223,6 @@ export function AppHeader() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <FlashToast
-        open={toastOpen}
-        message={toastMessage}
-        onClose={() => setToastOpen(false)}
-      />
     </header>
   );
 }

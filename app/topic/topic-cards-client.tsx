@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 import {
   AlertDialog,
@@ -31,7 +32,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FlashToast } from "@/components/ui/flash-toast";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -178,9 +178,6 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  const [toastOpen, setToastOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-
   const hydrated = topicsHydrated && cardsHydrated;
   const topic = topics.find((entry) => entry.id === topicId);
 
@@ -202,23 +199,6 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
     cardFrontValue !== cardBaselineFront || cardBackValue !== cardBaselineBack;
   const draftDirty =
     draftFrontValue !== draftBaselineFront || draftBackValue !== draftBaselineBack;
-
-  useEffect(() => {
-    if (!toastOpen) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setToastOpen(false);
-    }, 5_000);
-
-    return () => window.clearTimeout(timeout);
-  }, [toastOpen]);
-
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setToastOpen(true);
-  };
 
   const closeCardEditor = () => {
     setCardEditorOpen(false);
@@ -253,16 +233,16 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
     const back = cardBackValue.trim();
 
     if (!front || !back) {
-      showToast("Card front and back are required.");
+      toast.warning("Card front and back are required.");
       return;
     }
 
     if (editingCardId) {
       updateCard({ id: editingCardId, front, back });
-      showToast("Card updated.");
+      toast.success("Card updated.");
     } else {
       createCard({ topicId, front, back });
-      showToast("Card created.");
+      toast.success("Card created.");
     }
 
     closeCardEditor();
@@ -307,7 +287,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
     const words = parseWordsByLine(aiWordsRaw);
 
     if (words.length === 0) {
-      showToast("Please add at least one word (one per line).");
+      toast.warning("Please add at least one word (one per line).");
       return;
     }
 
@@ -317,14 +297,14 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
       const generated = await generateFlashcards(words, aiStyle);
 
       if (generated.length === 0) {
-        showToast("Gemini returned an empty response.");
+        toast.error("Gemini returned an empty response.");
         return;
       }
 
       const validation = aiFlashcardsSchema.safeParse(generated);
 
       if (!validation.success) {
-        showToast("Invalid AI response schema. Drafts were not saved.");
+        toast.error("Invalid AI response schema. Drafts were not saved.");
         return;
       }
 
@@ -340,39 +320,39 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
       setAiDrafts((current) => [...nextDrafts, ...current]);
       setAiDialogOpen(false);
       setAiWordsRaw("");
-      showToast(`Generated ${nextDrafts.length} draft cards.`);
+      toast.success(`Generated ${nextDrafts.length} draft cards.`);
     } catch (error) {
       if (error instanceof AIServiceError) {
         if (error.code === "missing_api_key") {
-          showToast("Missing NEXT_PUBLIC_GEMINI_API_KEY in .env.local.");
+          toast.error("Missing NEXT_PUBLIC_GEMINI_API_KEY in .env.local.");
           return;
         }
 
         if (error.code === "empty_response") {
-          showToast("Gemini returned an empty response.");
+          toast.error("Gemini returned an empty response.");
           return;
         }
 
         if (error.code === "invalid_json") {
-          showToast("Gemini returned invalid JSON.");
+          toast.error("Gemini returned invalid JSON.");
           return;
         }
 
         if (error.code === "quota_exceeded") {
-          showToast("Gemini quota exceeded. Try again later.");
+          toast.error("Gemini quota exceeded. Try again later.");
           return;
         }
 
         if (error.code === "invalid_output") {
-          showToast("Gemini output is invalid. Drafts were not saved.");
+          toast.error("Gemini output is invalid. Drafts were not saved.");
           return;
         }
 
-        showToast(error.message);
+        toast.error(error.message);
         return;
       }
 
-      showToast("AI generation failed. Please try again.");
+      toast.error("AI generation failed. Please try again.");
     } finally {
       setAiLoading(false);
     }
@@ -435,7 +415,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
     const back = draftBackValue.trim();
 
     if (!front || !back) {
-      showToast("Draft front and back cannot be empty.");
+      toast.warning("Draft front and back cannot be empty.");
       return;
     }
 
@@ -448,7 +428,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
     setDraftBackValue(back);
     setDraftBaselineFront(front);
     setDraftBaselineBack(back);
-    showToast("Draft saved.");
+    toast("Draft saved.");
   };
 
   const discardDraft = (draftId: string) => {
@@ -472,7 +452,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
       back: draft.back.trim(),
     });
     discardDraft(draftId);
-    showToast("Draft approved and card created.");
+    toast.success("Draft approved and card created.");
   };
 
   const approveDraftFromEditor = () => {
@@ -484,14 +464,14 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
     const back = draftBackValue.trim();
 
     if (!front || !back) {
-      showToast("Draft front and back cannot be empty.");
+      toast.warning("Draft front and back cannot be empty.");
       return;
     }
 
     createCard({ topicId, front, back });
     setAiDrafts((current) => current.filter((draft) => draft.id !== editingDraftId));
     closeDraftEditor();
-    showToast("Draft approved and card created.");
+    toast.success("Draft approved and card created.");
   };
 
   const openApproveAllDialog = () => {
@@ -520,7 +500,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
     setAiDrafts([]);
     setApproveAllOpen(false);
     closeDraftEditor();
-    showToast(`Approved ${count} drafts.`);
+    toast.success(`Approved ${count} drafts.`);
   };
 
   const discardAllDrafts = () => {
@@ -530,7 +510,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
 
     setAiDrafts([]);
     closeDraftEditor();
-    showToast("Discarded all drafts.");
+    toast("Discarded all drafts.");
   };
 
   const exportDrafts = () => {
@@ -549,7 +529,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
     const stamp = format(new Date(), "yyyy-MM-dd-HH-mm");
     const safeTopicName = toFileSafeName(topic.name) || "topic";
     downloadJson(payload, `lexora-ai-drafts-${safeTopicName}-${stamp}.json`);
-    showToast("Drafts exported as JSON.");
+    toast.success("Drafts exported as JSON.");
   };
 
   if (!hydrated) {
@@ -849,12 +829,6 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <FlashToast
-        open={toastOpen}
-        message={toastMessage}
-        onClose={() => setToastOpen(false)}
-      />
     </div>
   );
 }

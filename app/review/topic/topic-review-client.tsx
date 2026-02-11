@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import type { ReviewGrade } from "@/services/review.service";
 import { MarkdownViewer } from "@/components/markdown-viewer";
-import { FlashToast } from "@/components/ui/flash-toast";
 import { useCardsStore } from "@/stores/useCardsStore";
 import { useTopicsStore } from "@/stores/useTopicsStore";
 import { IntervalPreviewButton } from "./IntervalPreviewButton";
@@ -37,8 +37,6 @@ export function TopicReviewClient({ topicId }: TopicReviewClientProps) {
   const currentTime = useMemo(() => Date.parse(new Date().toISOString()), []);
   const [revealedCardId, setRevealedCardId] = useState<string | null>(null);
   const [reviewedCount, setReviewedCount] = useState(0);
-  const [toastOpen, setToastOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
 
   const hydrated = topicsHydrated && cardsHydrated;
   const topic = topics.find((item) => item.id === topicId);
@@ -60,18 +58,6 @@ export function TopicReviewClient({ topicId }: TopicReviewClientProps) {
     totalInSession === 0 ? 100 : Math.round((reviewedCount / totalInSession) * 100);
   const revealed = !!current && revealedCardId === current.id;
 
-  useEffect(() => {
-    if (!toastOpen) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setToastOpen(false);
-    }, 5_000);
-
-    return () => window.clearTimeout(timeout);
-  }, [toastOpen]);
-
   const handleGrade = (grade: ReviewGrade) => {
     if (!current) {
       return;
@@ -85,10 +71,9 @@ export function TopicReviewClient({ topicId }: TopicReviewClientProps) {
 
     setReviewedCount((value) => value + 1);
     setRevealedCardId(null);
-    setToastMessage(
+    toast.success(
       `Saved as ${grade}. Next due ${format(new Date(updated.dueDate), "PPP 'at' HH:mm")}.`,
     );
-    setToastOpen(true);
   };
 
   if (!hydrated) {
@@ -207,11 +192,6 @@ export function TopicReviewClient({ topicId }: TopicReviewClientProps) {
         </CardContent>
       </Card>
 
-      <FlashToast
-        open={toastOpen}
-        message={toastMessage}
-        onClose={() => setToastOpen(false)}
-      />
     </div>
   );
 }

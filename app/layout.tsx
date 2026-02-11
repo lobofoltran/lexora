@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { Toaster } from "sonner";
 import { AppHeader } from "@/components/app-header";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
@@ -42,6 +43,12 @@ export default function RootLayout({
             <AppHeader />
             <main className="mx-auto w-full max-w-6xl flex-1">{children}</main>
           </div>
+          <Toaster
+            richColors
+            position="bottom-right"
+            expand
+            closeButton
+          />
         </ThemeProvider>
       </body>
     </html>
