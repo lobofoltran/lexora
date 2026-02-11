@@ -113,7 +113,7 @@ export async function generateFlashcards(
   words: string[],
   style: string,
 ): Promise<AIGeneratedFlashcard[]> {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY?.trim();
+  const apiKey = "AIzaSyDi6-UDVjGjGePxwdvNSHfhsnbW_HyjkkA";
 
   if (!apiKey) {
     throw new AIServiceError(
