@@ -5,6 +5,15 @@ import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
+import { DEFAULT_FLASHCARD_CONFIG } from "@/flashcards/domain/FlashcardConfig";
+import type {
+  DifficultyLevel,
+  ExampleContext,
+  KnowledgeDomain,
+  OutputDepth,
+  SynonymDensity,
+  TargetAudience,
+} from "@/flashcards/domain/FlashcardGenerationInput";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,6 +83,63 @@ interface BulkCardInput {
 }
 
 const EMPTY_AI_DRAFTS: AIDraftCard[] = [];
+const LEGACY_STYLE_DEFAULT: AIDraftStyle = "academic";
+
+const DIFFICULTY_OPTIONS: DifficultyLevel[] = [
+  "beginner",
+  "intermediate",
+  "advanced",
+  "expert",
+];
+const DOMAIN_OPTIONS: KnowledgeDomain[] = [
+  "general",
+  "software_engineering",
+  "devops",
+  "cloud",
+  "data_science",
+  "finance",
+  "business",
+  "ai_ml",
+  "cybersecurity",
+];
+const TARGET_AUDIENCE_OPTIONS: TargetAudience[] = [
+  "language_learners",
+  "developers",
+  "engineers",
+  "executives",
+  "students",
+];
+const OUTPUT_DEPTH_OPTIONS: OutputDepth[] = [
+  "compact",
+  "standard",
+  "robust",
+  "encyclopedic",
+];
+const EXAMPLE_CONTEXT_OPTIONS: ExampleContext[] = [
+  "daily_life",
+  "workplace",
+  "software_projects",
+  "startups",
+  "enterprise",
+  "academic",
+  "interview",
+];
+const SYNONYM_DENSITY_OPTIONS: SynonymDensity[] = ["low", "medium", "high"];
+const STYLE_OPTIONS: AIDraftStyle[] = [
+  "academic",
+  "technical",
+  "casual",
+  "executive",
+  "interview_preparation",
+  "documentation",
+];
+
+function toTitleLabel(value: string): string {
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 function previewMarkdown(content: string): string {
   const compact = content.replace(/\s+/g, " ").trim();
@@ -155,6 +221,9 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
   const aiSession = useAiDraftSessionsStore((state) => state.sessions[deckId]);
   const setDeckWordsRaw = useAiDraftSessionsStore((state) => state.setDeckWordsRaw);
   const setDeckStyle = useAiDraftSessionsStore((state) => state.setDeckStyle);
+  const setDeckGenerationOptions = useAiDraftSessionsStore(
+    (state) => state.setDeckGenerationOptions,
+  );
   const appendDeckDrafts = useAiDraftSessionsStore((state) => state.appendDeckDrafts);
   const updateDeckDraft = useAiDraftSessionsStore((state) => state.updateDeckDraft);
   const removeDeckDraft = useAiDraftSessionsStore((state) => state.removeDeckDraft);
@@ -189,7 +258,25 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
   const hydrated = decksHydrated && cardsHydrated && aiSessionsHydrated;
   const deck = decks.find((entry) => entry.id === deckId);
   const aiWordsRaw = aiSession?.wordsRaw ?? "";
-  const aiStyle: AIDraftStyle = aiSession?.style ?? "Vocabulary";
+  const aiStyle: AIDraftStyle = aiSession?.style ?? LEGACY_STYLE_DEFAULT;
+  const aiDifficulty = aiSession?.difficulty ?? DEFAULT_FLASHCARD_CONFIG.difficulty;
+  const aiDomain = aiSession?.domain ?? DEFAULT_FLASHCARD_CONFIG.domain;
+  const aiTargetAudience =
+    aiSession?.targetAudience ?? DEFAULT_FLASHCARD_CONFIG.targetAudience;
+  const aiOutputDepth = aiSession?.outputDepth ?? DEFAULT_FLASHCARD_CONFIG.outputDepth;
+  const aiExampleContext =
+    aiSession?.exampleContext ?? DEFAULT_FLASHCARD_CONFIG.exampleContext;
+  const aiSynonymDensity =
+    aiSession?.synonymDensity ?? DEFAULT_FLASHCARD_CONFIG.synonymDensity;
+  const aiIncludeEtymology =
+    aiSession?.includeEtymology ?? DEFAULT_FLASHCARD_CONFIG.includeEtymology;
+  const aiIncludeCodeExamples =
+    aiSession?.includeCodeExamples ?? DEFAULT_FLASHCARD_CONFIG.includeCodeExamples;
+  const aiIncludeCollocations =
+    aiSession?.includeCollocations ?? DEFAULT_FLASHCARD_CONFIG.includeCollocations;
+  const aiIncludeCommonMistakes =
+    aiSession?.includeCommonMistakes ??
+    DEFAULT_FLASHCARD_CONFIG.includeCommonMistakes;
   const aiDrafts: AIDraftCard[] = aiSession?.drafts ?? EMPTY_AI_DRAFTS;
 
   const deckCards = useMemo(
@@ -305,7 +392,18 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
     setAiLoading(true);
 
     try {
-      const generated = await generateFlashcards(words, aiStyle);
+      const generated = await generateFlashcards(words, aiStyle, {
+        difficulty: aiDifficulty,
+        domain: aiDomain,
+        targetAudience: aiTargetAudience,
+        outputDepth: aiOutputDepth,
+        exampleContext: aiExampleContext,
+        synonymDensity: aiSynonymDensity,
+        includeEtymology: aiIncludeEtymology,
+        includeCodeExamples: aiIncludeCodeExamples,
+        includeCollocations: aiIncludeCollocations,
+        includeCommonMistakes: aiIncludeCommonMistakes,
+      });
 
       if (generated.length === 0) {
         toast.error("Gemini returned an empty response.");
@@ -330,7 +428,6 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
 
       appendDeckDrafts(deckId, nextDrafts);
       setAiDialogOpen(false);
-      setDeckWordsRaw(deckId, "");
       toast.success(`Generated ${nextDrafts.length} draft cards.`);
     } catch (error) {
       if (error instanceof AIServiceError) {
@@ -712,39 +809,244 @@ export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
           <DialogHeader>
             <DialogTitle>Generate with AI</DialogTitle>
             <DialogDescription>
-              Paste one word/term per line and choose a style.
+              Configure generation rules to produce richer and domain-aware drafts.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="ai-words">Words (one per line)</Label>
-              <Textarea
-                id="ai-words"
-                rows={10}
-                value={aiWordsRaw}
-                onChange={(event) => setDeckWordsRaw(deckId, event.target.value)}
-                placeholder={["abandon", "carry on", "garbage collector"].join("\n")}
-              />
-            </div>
+          <Tabs defaultValue="basic" className="space-y-3">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="basic">Basic</TabsTrigger>
+              <TabsTrigger value="advanced">Advanced</TabsTrigger>
+            </TabsList>
 
-            <div className="space-y-1">
-              <Label htmlFor="ai-style">Style</Label>
-              <Select
-                value={aiStyle}
-                onValueChange={(value) => setDeckStyle(deckId, value as AIDraftStyle)}
-              >
-                <SelectTrigger id="ai-style" className="w-full">
-                  <SelectValue placeholder="Select style" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Vocabulary">Vocabulary</SelectItem>
-                  <SelectItem value="Phrasal verbs">Phrasal verbs</SelectItem>
-                  <SelectItem value="Tech terms">Tech terms</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+            <TabsContent value="basic" className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="ai-words">Words (one per line)</Label>
+                <Textarea
+                  id="ai-words"
+                  rows={9}
+                  value={aiWordsRaw}
+                  onChange={(event) => setDeckWordsRaw(deckId, event.target.value)}
+                  placeholder={["Kubernetes", "CI/CD", "microservices"].join("\n")}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="ai-style">Style</Label>
+                <Select
+                  value={aiStyle}
+                  onValueChange={(value) => setDeckStyle(deckId, value as AIDraftStyle)}
+                >
+                  <SelectTrigger id="ai-style" className="w-full">
+                    <SelectValue placeholder="Select style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STYLE_OPTIONS.map((style) => (
+                      <SelectItem key={style} value={style}>
+                        {toTitleLabel(style)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="advanced" className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="ai-difficulty">Difficulty</Label>
+                  <Select
+                    value={aiDifficulty}
+                    onValueChange={(value) =>
+                      setDeckGenerationOptions(deckId, {
+                        difficulty: value as DifficultyLevel,
+                      })
+                    }
+                  >
+                    <SelectTrigger id="ai-difficulty" className="w-full">
+                      <SelectValue placeholder="Difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DIFFICULTY_OPTIONS.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {toTitleLabel(value)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="ai-domain">Domain</Label>
+                  <Select
+                    value={aiDomain}
+                    onValueChange={(value) =>
+                      setDeckGenerationOptions(deckId, {
+                        domain: value as KnowledgeDomain,
+                      })
+                    }
+                  >
+                    <SelectTrigger id="ai-domain" className="w-full">
+                      <SelectValue placeholder="Domain" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DOMAIN_OPTIONS.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {toTitleLabel(value)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="ai-audience">Audience</Label>
+                  <Select
+                    value={aiTargetAudience}
+                    onValueChange={(value) =>
+                      setDeckGenerationOptions(deckId, {
+                        targetAudience: value as TargetAudience,
+                      })
+                    }
+                  >
+                    <SelectTrigger id="ai-audience" className="w-full">
+                      <SelectValue placeholder="Audience" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TARGET_AUDIENCE_OPTIONS.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {toTitleLabel(value)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="ai-depth">Output depth</Label>
+                  <Select
+                    value={aiOutputDepth}
+                    onValueChange={(value) =>
+                      setDeckGenerationOptions(deckId, {
+                        outputDepth: value as OutputDepth,
+                      })
+                    }
+                  >
+                    <SelectTrigger id="ai-depth" className="w-full">
+                      <SelectValue placeholder="Output depth" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OUTPUT_DEPTH_OPTIONS.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {toTitleLabel(value)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="ai-context">Example context</Label>
+                  <Select
+                    value={aiExampleContext}
+                    onValueChange={(value) =>
+                      setDeckGenerationOptions(deckId, {
+                        exampleContext: value as ExampleContext,
+                      })
+                    }
+                  >
+                    <SelectTrigger id="ai-context" className="w-full">
+                      <SelectValue placeholder="Example context" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EXAMPLE_CONTEXT_OPTIONS.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {toTitleLabel(value)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="ai-synonym-density">Synonym density</Label>
+                  <Select
+                    value={aiSynonymDensity}
+                    onValueChange={(value) =>
+                      setDeckGenerationOptions(deckId, {
+                        synonymDensity: value as SynonymDensity,
+                      })
+                    }
+                  >
+                    <SelectTrigger id="ai-synonym-density" className="w-full">
+                      <SelectValue placeholder="Synonym density" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SYNONYM_DENSITY_OPTIONS.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {toTitleLabel(value)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Enrichment toggles</Label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={aiIncludeCodeExamples ? "default" : "outline"}
+                    onClick={() =>
+                      setDeckGenerationOptions(deckId, {
+                        includeCodeExamples: !aiIncludeCodeExamples,
+                      })
+                    }
+                  >
+                    Code examples
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={aiIncludeCommonMistakes ? "default" : "outline"}
+                    onClick={() =>
+                      setDeckGenerationOptions(deckId, {
+                        includeCommonMistakes: !aiIncludeCommonMistakes,
+                      })
+                    }
+                  >
+                    Common mistakes
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={aiIncludeCollocations ? "default" : "outline"}
+                    onClick={() =>
+                      setDeckGenerationOptions(deckId, {
+                        includeCollocations: !aiIncludeCollocations,
+                      })
+                    }
+                  >
+                    Collocations
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={aiIncludeEtymology ? "default" : "outline"}
+                    onClick={() =>
+                      setDeckGenerationOptions(deckId, {
+                        includeEtymology: !aiIncludeEtymology,
+                      })
+                    }
+                  >
+                    Etymology
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setAiDialogOpen(false)}>

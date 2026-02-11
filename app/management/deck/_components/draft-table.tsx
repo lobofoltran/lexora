@@ -32,6 +32,13 @@ function getLengthLabel(front: string, back: string): string {
   return `F:${frontLength} B:${backLength} T:${total}`;
 }
 
+function formatStyleLabel(style: string): string {
+  return style
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function DraftTable({
   drafts,
   density,
@@ -58,7 +65,7 @@ export function DraftTable({
             <article key={draft.id} className="space-y-2 rounded-md border p-2">
               <div className={metaClassName}>
                 <Badge variant="secondary">Draft</Badge>
-                <Badge variant="outline">{draft.style}</Badge>
+                <Badge variant="outline">{formatStyleLabel(draft.style)}</Badge>
                 <span className="text-muted-foreground">
                   {format(new Date(draft.createdAt), "PPP 'at' HH:mm")}
                 </span>
@@ -125,7 +132,7 @@ export function DraftTable({
                   <p className={previewClassName}>{draft.front}</p>
                   <div className={metaClassName}>
                     <Badge variant="secondary">Draft</Badge>
-                    <Badge variant="outline">{draft.style}</Badge>
+                    <Badge variant="outline">{formatStyleLabel(draft.style)}</Badge>
                     <span className="text-muted-foreground">
                       {format(new Date(draft.createdAt), "PPP 'at' HH:mm")}
                     </span>
