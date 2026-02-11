@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -17,6 +17,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import type { ReviewGrade } from "@/services/review.service";
 import { MarkdownViewer } from "@/components/markdown-viewer";
+import { onReviewFinished } from "@/lib/googleDriveSync";
 import { useCardsStore } from "@/stores/useCardsStore";
 import { useDecksStore } from "@/stores/useDecksStore";
 import { IntervalPreviewButton } from "./IntervalPreviewButton";
@@ -37,6 +38,7 @@ export function DeckReviewClient({ deckId }: DeckReviewClientProps) {
   const currentTime = useMemo(() => Date.parse(new Date().toISOString()), []);
   const [revealedCardId, setRevealedCardId] = useState<string | null>(null);
   const [reviewedCount, setReviewedCount] = useState(0);
+  const completionSyncTriggeredRef = useRef(false);
 
   const hydrated = decksHydrated && cardsHydrated;
   const deck = decks.find((item) => item.id === deckId);
@@ -57,6 +59,24 @@ export function DeckReviewClient({ deckId }: DeckReviewClientProps) {
   const progressPercent =
     totalInSession === 0 ? 100 : Math.round((reviewedCount / totalInSession) * 100);
   const revealed = !!current && revealedCardId === current.id;
+
+  useEffect(() => {
+    if (!hydrated || !deck) {
+      return;
+    }
+
+    if (dueCards.length > 0) {
+      completionSyncTriggeredRef.current = false;
+      return;
+    }
+
+    if (reviewedCount === 0 || completionSyncTriggeredRef.current) {
+      return;
+    }
+
+    completionSyncTriggeredRef.current = true;
+    void onReviewFinished();
+  }, [deck, dueCards.length, hydrated, reviewedCount]);
 
   const handleGrade = (grade: ReviewGrade) => {
     if (!current) {
