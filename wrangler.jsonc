@@ -5,6 +5,6 @@
     "directory": "./out"
   },
   "vars": {
-    "LEXORA_API_KEY": "AIzaSyDi6-UDVjGjGePxwdvNSHfhsnbW_HyjkkA"
+    "NEXT_PUBLIC_GEMINI_API_KEY": "AIzaSyDi6-UDVjGjGePxwdvNSHfhsnbW_HyjkkA"
   }
 }
