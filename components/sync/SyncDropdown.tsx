@@ -102,14 +102,35 @@ export function SyncDropdown() {
   }, [pendingChanges, status]);
 
   const handleSignInOut = async () => {
-    const result = isAuthenticated ? await signOut() : await signIn();
+    if (isAuthenticated) {
+      const signOutResult = await signOut();
 
-    if (result.ok) {
-      toast.success(isAuthenticated ? "Google account disconnected." : "Google account connected.");
+      if (signOutResult.ok) {
+        toast.success("Google account disconnected.");
+        return;
+      }
+
+      toast.error(getSyncErrorMessage(signOutResult.error));
       return;
     }
 
-    toast.error(getSyncErrorMessage(result.error));
+    const signInResult = await signIn();
+
+    if (!signInResult.ok) {
+      toast.error(getSyncErrorMessage(signInResult.error));
+      return;
+    }
+
+    toast.success("Google account connected.");
+
+    const downloadResult = await forceDownloadFromDrive();
+
+    if (downloadResult.ok) {
+      toast.success("Drive data downloaded and merged.");
+      return;
+    }
+
+    toast.error(getSyncErrorMessage(downloadResult.error));
   };
 
   const handleSyncNow = async () => {
