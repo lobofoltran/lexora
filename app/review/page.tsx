@@ -21,32 +21,32 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useCardsStore } from "@/stores/useCardsStore";
-import { useTopicsStore } from "@/stores/useTopicsStore";
+import { useDecksStore } from "@/stores/useDecksStore";
 
-export default function ReviewTopicsPage() {
-  const topics = useTopicsStore((state) => state.topics);
-  const topicsHydrated = useTopicsStore((state) => state.hasHydrated);
+export default function ReviewDecksPage() {
+  const decks = useDecksStore((state) => state.decks);
+  const decksHydrated = useDecksStore((state) => state.hasHydrated);
 
   const cards = useCardsStore((state) => state.cards);
   const cardsHydrated = useCardsStore((state) => state.hasHydrated);
 
   const currentTime = useMemo(() => Date.parse(new Date().toISOString()), []);
 
-  const hydrated = topicsHydrated && cardsHydrated;
+  const hydrated = decksHydrated && cardsHydrated;
 
-  const { cardsByTopic, dueByTopic } = useMemo(() => {
+  const { cardsByDeck, dueByDeck } = useMemo(() => {
     const totals = new Map<string, number>();
     const due = new Map<string, number>();
 
     for (const card of cards) {
-      totals.set(card.topicId, (totals.get(card.topicId) ?? 0) + 1);
+      totals.set(card.deckId, (totals.get(card.deckId) ?? 0) + 1);
 
       if (Date.parse(card.dueDate) <= currentTime) {
-        due.set(card.topicId, (due.get(card.topicId) ?? 0) + 1);
+        due.set(card.deckId, (due.get(card.deckId) ?? 0) + 1);
       }
     }
 
-    return { cardsByTopic: totals, dueByTopic: due };
+    return { cardsByDeck: totals, dueByDeck: due };
   }, [cards, currentTime]);
 
   if (!hydrated) {
@@ -54,7 +54,7 @@ export default function ReviewTopicsPage() {
       <div className="p-4">
         <Card>
           <CardHeader>
-            <CardTitle>Loading review topics...</CardTitle>
+            <CardTitle>Loading review decks...</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -67,14 +67,14 @@ export default function ReviewTopicsPage() {
         <CardHeader>
           <CardTitle>Review</CardTitle>
           <CardDescription>
-            Choose a topic and start today&apos;s due cards.
+            Choose a deck and start today&apos;s due cards.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {topics.length === 0 ? (
+          {decks.length === 0 ? (
             <div className="space-y-3">
               <p className="text-muted-foreground">
-                No topics yet. Create your first topic in management.
+                No decks yet. Create your first deck in management.
               </p>
               <Button asChild>
                 <Link href="/management">Open Management</Link>
@@ -92,13 +92,13 @@ export default function ReviewTopicsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {topics.map((topic) => {
-                  const totalCards = cardsByTopic.get(topic.id) ?? 0;
-                  const dueNow = dueByTopic.get(topic.id) ?? 0;
+                {decks.map((deck) => {
+                  const totalCards = cardsByDeck.get(deck.id) ?? 0;
+                  const dueNow = dueByDeck.get(deck.id) ?? 0;
 
                   return (
-                    <TableRow key={topic.id}>
-                      <TableCell>{topic.name}</TableCell>
+                    <TableRow key={deck.id}>
+                      <TableCell>{deck.name}</TableCell>
                       <TableCell>{totalCards}</TableCell>
                       <TableCell>
                         <Badge variant={dueNow > 0 ? "default" : "outline"}>
@@ -107,14 +107,14 @@ export default function ReviewTopicsPage() {
                       </TableCell>
                       <TableCell>
                         <Button asChild size="sm" disabled={dueNow === 0}>
-                          <Link href={`/review/topic?topicId=${encodeURIComponent(topic.id)}`}>
+                          <Link href={`/review/deck?deckId=${encodeURIComponent(deck.id)}`}>
                             Start Review
                           </Link>
                         </Button>
                       </TableCell>
                       <TableCell>
                         <Button asChild size="sm" variant="outline">
-                          <Link href={`/topic?id=${encodeURIComponent(topic.id)}`}>Open</Link>
+                          <Link href={`/management/deck?id=${encodeURIComponent(deck.id)}`}>Open</Link>
                         </Button>
                       </TableCell>
                     </TableRow>

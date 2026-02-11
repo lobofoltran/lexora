@@ -1,16 +1,16 @@
 import { z } from "zod";
 
-export const topicSchema = z.object({
+export const deckSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   createdAt: z.string().datetime(),
 });
 
-export type Topic = z.infer<typeof topicSchema>;
+export type Deck = z.infer<typeof deckSchema>;
 
 export const cardSchema = z.object({
   id: z.string().min(1),
-  topicId: z.string().min(1),
+  deckId: z.string().min(1),
   front: z.string(),
   back: z.string(),
   easeFactor: z.number().min(1.3),

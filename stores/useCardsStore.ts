@@ -12,7 +12,7 @@ import { cardSchema, type Card } from "@/types/flashcards";
 const cardsArraySchema = cardSchema.array();
 
 interface CreateCardInput {
-  topicId: string;
+  deckId: string;
   front: string;
   back: string;
 }
@@ -30,7 +30,7 @@ interface CardsStore {
   createCard: (input: CreateCardInput) => Card;
   updateCard: (input: UpdateCardInput) => void;
   deleteCard: (id: string) => void;
-  deleteCardsByTopic: (topicId: string) => void;
+  deleteCardsByDeck: (deckId: string) => void;
   reviewCard: (id: string, grade: ReviewGrade) => Card | undefined;
   mergeCards: (cards: Card[]) => void;
   replaceCards: (cards: Card[]) => void;
@@ -54,11 +54,11 @@ export const useCardsStore = create<CardsStore>()(
       cards: [],
       hasHydrated: false,
       setHasHydrated: (value) => set({ hasHydrated: value }),
-      createCard: ({ topicId, front, back }) => {
+      createCard: ({ deckId, front, back }) => {
         const now = new Date().toISOString();
         const card = cardSchema.parse({
           id: nanoid(),
-          topicId,
+          deckId,
           front,
           back,
           easeFactor: 2.5,
@@ -93,8 +93,8 @@ export const useCardsStore = create<CardsStore>()(
       deleteCard: (id) => {
         set({ cards: get().cards.filter((card) => card.id !== id) });
       },
-      deleteCardsByTopic: (topicId) => {
-        set({ cards: get().cards.filter((card) => card.topicId !== topicId) });
+      deleteCardsByDeck: (deckId) => {
+        set({ cards: get().cards.filter((card) => card.deckId !== deckId) });
       },
       reviewCard: (id, grade) => {
         const target = get().cards.find((card) => card.id === id);

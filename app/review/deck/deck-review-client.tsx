@@ -18,17 +18,17 @@ import { Separator } from "@/components/ui/separator";
 import type { ReviewGrade } from "@/services/review.service";
 import { MarkdownViewer } from "@/components/markdown-viewer";
 import { useCardsStore } from "@/stores/useCardsStore";
-import { useTopicsStore } from "@/stores/useTopicsStore";
+import { useDecksStore } from "@/stores/useDecksStore";
 import { IntervalPreviewButton } from "./IntervalPreviewButton";
 import { useIntervalPreview } from "./useIntervalPreview";
 
-interface TopicReviewClientProps {
-  topicId: string;
+interface DeckReviewClientProps {
+  deckId: string;
 }
 
-export function TopicReviewClient({ topicId }: TopicReviewClientProps) {
-  const topics = useTopicsStore((state) => state.topics);
-  const topicsHydrated = useTopicsStore((state) => state.hasHydrated);
+export function DeckReviewClient({ deckId }: DeckReviewClientProps) {
+  const decks = useDecksStore((state) => state.decks);
+  const decksHydrated = useDecksStore((state) => state.hasHydrated);
 
   const cards = useCardsStore((state) => state.cards);
   const cardsHydrated = useCardsStore((state) => state.hasHydrated);
@@ -38,16 +38,16 @@ export function TopicReviewClient({ topicId }: TopicReviewClientProps) {
   const [revealedCardId, setRevealedCardId] = useState<string | null>(null);
   const [reviewedCount, setReviewedCount] = useState(0);
 
-  const hydrated = topicsHydrated && cardsHydrated;
-  const topic = topics.find((item) => item.id === topicId);
+  const hydrated = decksHydrated && cardsHydrated;
+  const deck = decks.find((item) => item.id === deckId);
 
   const dueCards = useMemo(() => {
     return cards
       .filter(
-        (card) => card.topicId === topicId && Date.parse(card.dueDate) <= currentTime,
+        (card) => card.deckId === deckId && Date.parse(card.dueDate) <= currentTime,
       )
       .sort((a, b) => Date.parse(a.dueDate) - Date.parse(b.dueDate));
-  }, [cards, currentTime, topicId]);
+  }, [cards, currentTime, deckId]);
 
   const current = dueCards[0];
   const hardPreviewDate = useIntervalPreview(current, "hard");
@@ -88,14 +88,14 @@ export function TopicReviewClient({ topicId }: TopicReviewClientProps) {
     );
   }
 
-  if (!topic) {
+  if (!deck) {
     return (
       <div className="space-y-4 p-4">
         <Card>
           <CardHeader>
-            <CardTitle>Topic not found</CardTitle>
+            <CardTitle>Deck not found</CardTitle>
             <CardDescription>
-              The selected topic does not exist in local storage.
+              The selected deck does not exist in local storage.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -113,13 +113,13 @@ export function TopicReviewClient({ topicId }: TopicReviewClientProps) {
       <div className="space-y-4 p-4">
         <Card>
           <CardHeader>
-            <CardTitle>{topic.name}</CardTitle>
+            <CardTitle>{deck.name}</CardTitle>
             <CardDescription>All due cards are completed.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-muted-foreground">No cards are due right now.</p>
             <Button asChild>
-              <Link href="/review">Return to topics</Link>
+              <Link href="/review">Return to decks</Link>
             </Button>
           </CardContent>
         </Card>
@@ -132,12 +132,12 @@ export function TopicReviewClient({ topicId }: TopicReviewClientProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <span>{topic.name}</span>
+            <span>{deck.name}</span>
             <Badge variant="outline">
               {reviewedCount}/{totalInSession} reviewed
             </Badge>
           </CardTitle>
-          <CardDescription>Review only due cards for this topic.</CardDescription>
+          <CardDescription>Review only due cards for this deck.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1">

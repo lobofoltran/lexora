@@ -37,7 +37,7 @@ import {
 } from "@/lib/export-import";
 import { clearLexoraStorage } from "@/lib/storage";
 import { useCardsStore } from "@/stores/useCardsStore";
-import { useTopicsStore } from "@/stores/useTopicsStore";
+import { useDecksStore } from "@/stores/useDecksStore";
 import { ThemeToggle } from "./theme-toggle";
 
 function isActive(pathname: string, href: string): boolean {
@@ -48,10 +48,10 @@ export function AppHeader() {
   const pathname = usePathname();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const topics = useTopicsStore((state) => state.topics);
-  const topicsHydrated = useTopicsStore((state) => state.hasHydrated);
-  const replaceTopics = useTopicsStore((state) => state.replaceTopics);
-  const resetTopics = useTopicsStore((state) => state.resetTopics);
+  const decks = useDecksStore((state) => state.decks);
+  const decksHydrated = useDecksStore((state) => state.hasHydrated);
+  const replaceDecks = useDecksStore((state) => state.replaceDecks);
+  const resetDecks = useDecksStore((state) => state.resetDecks);
 
   const cards = useCardsStore((state) => state.cards);
   const cardsHydrated = useCardsStore((state) => state.hasHydrated);
@@ -60,14 +60,14 @@ export function AppHeader() {
 
   const [resetOpen, setResetOpen] = useState(false);
 
-  const hydrated = topicsHydrated && cardsHydrated;
+  const hydrated = decksHydrated && cardsHydrated;
 
   const handleExport = () => {
     if (!hydrated) {
       return;
     }
 
-    const payload = buildExportPayload(topics, cards);
+    const payload = buildExportPayload(decks, cards);
     const stamp = format(new Date(), "yyyy-MM-dd-HH-mm");
     downloadJson(payload, `lexora-export-${stamp}.json`);
     toast.success("Export file downloaded.");
@@ -88,11 +88,11 @@ export function AppHeader() {
       const raw = await file.text();
       const imported = parseImportJson(raw);
       const merged = mergeFlashcardData(
-        buildExportPayload(topics, cards),
+        buildExportPayload(decks, cards),
         imported,
       );
 
-      replaceTopics(merged.topics);
+      replaceDecks(merged.decks);
       replaceCards(merged.cards);
       toast.success("Import completed and merged successfully.");
     } catch (error) {
@@ -107,7 +107,7 @@ export function AppHeader() {
   };
 
   const handleReset = async () => {
-    resetTopics();
+    resetDecks();
     resetCards();
     await clearLexoraStorage();
     setResetOpen(false);
@@ -144,14 +144,14 @@ export function AppHeader() {
                 asChild
                 active={
                   isActive(pathname, "/management") ||
-                  isActive(pathname, "/topic")
+                  isActive(pathname, "/management/deck")
                 }
               >
                 <Link
                   href="/management"
                   className="px-4 py-2 rounded-md data-[active]:bg-primary data-[active]:text-primary-foreground data-[active]:font-semibold"
                 >
-                  Card Management
+                  Decks
                 </Link>
               </NavigationMenuLink>
             </NavigationMenuItem>
@@ -211,7 +211,7 @@ export function AppHeader() {
           <AlertDialogHeader>
             <AlertDialogTitle>Reset all local data?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove all topics, cards, and review progress from this
+              This will remove all decks, cards, and review progress from this
               browser.
             </AlertDialogDescription>
           </AlertDialogHeader>

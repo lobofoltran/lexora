@@ -1,16 +1,16 @@
 import { z } from "zod";
 
-import { cardSchema, topicSchema, type Card, type Topic } from "@/types/flashcards";
+import { cardSchema, deckSchema, type Card, type Deck } from "@/types/flashcards";
 
 export const flashcardDataSchema = z.object({
-  topics: z.array(topicSchema),
+  decks: z.array(deckSchema),
   cards: z.array(cardSchema),
 });
 
 export type FlashcardData = z.infer<typeof flashcardDataSchema>;
 
-export function buildExportPayload(topics: Topic[], cards: Card[]): FlashcardData {
-  return flashcardDataSchema.parse({ topics, cards });
+export function buildExportPayload(decks: Deck[], cards: Card[]): FlashcardData {
+  return flashcardDataSchema.parse({ decks, cards });
 }
 
 export function exportDataAsJson(data: FlashcardData): string {
@@ -57,29 +57,29 @@ export function mergeFlashcardData(
   current: FlashcardData,
   incoming: FlashcardData,
 ): FlashcardData {
-  const topicsMap = new Map<string, Topic>();
+  const decksMap = new Map<string, Deck>();
 
-  for (const topic of current.topics) {
-    topicsMap.set(topic.id, topic);
+  for (const deck of current.decks) {
+    decksMap.set(deck.id, deck);
   }
 
-  for (const topic of incoming.topics) {
-    topicsMap.set(topic.id, topic);
+  for (const deck of incoming.decks) {
+    decksMap.set(deck.id, deck);
   }
 
-  const mergedTopics = Array.from(topicsMap.values());
-  const validTopicIds = new Set(mergedTopics.map((topic) => topic.id));
+  const mergedDecks = Array.from(decksMap.values());
+  const validDeckIds = new Set(mergedDecks.map((deck) => deck.id));
 
   const cardsMap = new Map<string, Card>();
 
   for (const card of current.cards) {
-    if (validTopicIds.has(card.topicId)) {
+    if (validDeckIds.has(card.deckId)) {
       cardsMap.set(card.id, card);
     }
   }
 
   for (const card of incoming.cards) {
-    if (!validTopicIds.has(card.topicId)) {
+    if (!validDeckIds.has(card.deckId)) {
       continue;
     }
 
@@ -94,7 +94,7 @@ export function mergeFlashcardData(
   }
 
   return flashcardDataSchema.parse({
-    topics: mergedTopics,
+    decks: mergedDecks,
     cards: Array.from(cardsMap.values()),
   });
 }

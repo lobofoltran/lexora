@@ -15,7 +15,7 @@ The app is exported statically (`output: "export"`) and runs entirely in the bro
 
 State is split into two persisted Zustand stores:
 
-- `useTopicsStore`
+- `useDecksStore`
 - `useCardsStore`
 
 Persistence details:
@@ -26,7 +26,7 @@ Persistence details:
 
 Data shape:
 
-- `Topic`: id, name, createdAt
+- `Deck`: id, name, createdAt
 - `Card`: front/back markdown, scheduling metadata, due date timestamps
 
 Import/export path:
@@ -62,10 +62,10 @@ On review, the card gets:
 
 Primary routes:
 
-- `/review`: topic-level due overview
-- `/review/topic?topicId=...`: due queue and grading flow
-- `/management`: topic CRUD
-- `/topic?id=...`: per-topic card management and bulk creation
+- `/review`: deck-level due overview
+- `/review/deck?deckId=...`: due queue and grading flow
+- `/management`: deck CRUD
+- `/management/deck?id=...`: per-deck card management and bulk creation
 
 Shared layout includes a navigation header with:
 

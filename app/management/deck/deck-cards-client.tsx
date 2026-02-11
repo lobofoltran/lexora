@@ -56,15 +56,15 @@ import {
   generateFlashcards,
 } from "@/services/ai.service";
 import { useCardsStore } from "@/stores/useCardsStore";
-import { useTopicsStore } from "@/stores/useTopicsStore";
+import { useDecksStore } from "@/stores/useDecksStore";
 
 import { DraftTable } from "./_components/draft-table";
 import { DraftToolbar } from "./_components/draft-toolbar";
 import { EditorModal } from "./_components/editor-modal";
 import type { AIDraftCard, AIDraftStyle, DensityMode } from "./_components/draft-types";
 
-interface TopicCardsClientProps {
-  topicId: string;
+interface DeckCardsClientProps {
+  deckId: string;
 }
 
 interface BulkCardInput {
@@ -139,9 +139,9 @@ function toFileSafeName(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
-  const topics = useTopicsStore((state) => state.topics);
-  const topicsHydrated = useTopicsStore((state) => state.hasHydrated);
+export function DeckCardsClient({ deckId }: DeckCardsClientProps) {
+  const decks = useDecksStore((state) => state.decks);
+  const decksHydrated = useDecksStore((state) => state.hasHydrated);
 
   const cards = useCardsStore((state) => state.cards);
   const cardsHydrated = useCardsStore((state) => state.hasHydrated);
@@ -178,15 +178,15 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  const hydrated = topicsHydrated && cardsHydrated;
-  const topic = topics.find((entry) => entry.id === topicId);
+  const hydrated = decksHydrated && cardsHydrated;
+  const deck = decks.find((entry) => entry.id === deckId);
 
-  const topicCards = useMemo(
+  const deckCards = useMemo(
     () =>
       cards
-        .filter((card) => card.topicId === topicId)
+        .filter((card) => card.deckId === deckId)
         .sort((a, b) => Date.parse(a.dueDate) - Date.parse(b.dueDate)),
-    [cards, topicId],
+    [cards, deckId],
   );
 
   const orderedDrafts = useMemo(
@@ -214,7 +214,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
   };
 
   const openEditEditor = (cardId: string) => {
-    const card = topicCards.find((entry) => entry.id === cardId);
+    const card = deckCards.find((entry) => entry.id === cardId);
 
     if (!card) {
       return;
@@ -241,7 +241,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
       updateCard({ id: editingCardId, front, back });
       toast.success("Card updated.");
     } else {
-      createCard({ topicId, front, back });
+      createCard({ deckId, front, back });
       toast.success("Card created.");
     }
 
@@ -273,7 +273,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
 
     for (const entry of entries) {
       createCard({
-        topicId,
+        deckId,
         front: entry.front,
         back: entry.back,
       });
@@ -447,7 +447,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
     }
 
     createCard({
-      topicId,
+      deckId,
       front: draft.front.trim(),
       back: draft.back.trim(),
     });
@@ -468,7 +468,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
       return;
     }
 
-    createCard({ topicId, front, back });
+    createCard({ deckId, front, back });
     setAiDrafts((current) => current.filter((draft) => draft.id !== editingDraftId));
     closeDraftEditor();
     toast.success("Draft approved and card created.");
@@ -490,7 +490,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
 
     for (const draft of aiDrafts) {
       createCard({
-        topicId,
+        deckId,
         front: draft.front.trim(),
         back: draft.back.trim(),
       });
@@ -514,7 +514,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
   };
 
   const exportDrafts = () => {
-    if (!topic || aiDrafts.length === 0) {
+    if (!deck || aiDrafts.length === 0) {
       return;
     }
 
@@ -527,8 +527,8 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
     }));
 
     const stamp = format(new Date(), "yyyy-MM-dd-HH-mm");
-    const safeTopicName = toFileSafeName(topic.name) || "topic";
-    downloadJson(payload, `lexora-ai-drafts-${safeTopicName}-${stamp}.json`);
+    const safeDeckName = toFileSafeName(deck.name) || "deck";
+    downloadJson(payload, `lexora-ai-drafts-${safeDeckName}-${stamp}.json`);
     toast.success("Drafts exported as JSON.");
   };
 
@@ -537,21 +537,21 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
       <div className="p-4">
         <Card>
           <CardHeader>
-            <CardTitle>Loading topic...</CardTitle>
+            <CardTitle>Loading deck...</CardTitle>
           </CardHeader>
         </Card>
       </div>
     );
   }
 
-  if (!topic) {
+  if (!deck) {
     return (
       <div className="space-y-4 p-4">
         <Card>
           <CardHeader>
-            <CardTitle>Topic not found</CardTitle>
+            <CardTitle>Deck not found</CardTitle>
             <CardDescription>
-              The requested topic does not exist in local storage.
+              The requested deck does not exist in local storage.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -569,7 +569,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex flex-wrap items-center justify-between gap-2">
-            <span>{topic.name}</span>
+            <span>{deck.name}</span>
             <Button size="sm" variant="outline" onClick={() => setAiDialogOpen(true)}>
               Generate with AI
             </Button>
@@ -621,8 +621,8 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
                 </Button>
               </div>
 
-              {topicCards.length === 0 ? (
-                <p className="text-muted-foreground">No cards in this topic yet.</p>
+              {deckCards.length === 0 ? (
+                <p className="text-muted-foreground">No cards in this deck yet.</p>
               ) : (
                 <Table>
                   <TableHeader>
@@ -636,7 +636,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {topicCards.map((card) => (
+                    {deckCards.map((card) => (
                       <TableRow key={card.id}>
                         <TableCell>{previewMarkdown(card.front)}</TableCell>
                         <TableCell>{previewMarkdown(card.back)}</TableCell>
@@ -803,7 +803,7 @@ export function TopicCardsClient({ topicId }: TopicCardsClientProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Approve all drafts?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will create {aiDrafts.length} cards in this topic.
+              This will create {aiDrafts.length} cards in this deck.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

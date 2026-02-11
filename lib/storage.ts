@@ -2,7 +2,7 @@ import localforage from "localforage";
 import { createJSONStorage, type StateStorage } from "zustand/middleware";
 
 export const STORE_KEYS = {
-  topics: "lexora-topics-store",
+  decks: "lexora-decks-store",
   cards: "lexora-cards-store",
 } as const;
 
@@ -43,7 +43,7 @@ export const zustandStorage = createJSONStorage(() =>
 
 export async function clearLexoraStorage(): Promise<void> {
   await Promise.all([
-    lexoraForage.removeItem(STORE_KEYS.topics),
+    lexoraForage.removeItem(STORE_KEYS.decks),
     lexoraForage.removeItem(STORE_KEYS.cards),
   ]);
 }

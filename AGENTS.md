@@ -27,13 +27,13 @@
 
 ```json
 {
-  "topics": [],
+  "decks": [],
   "cards": []
 }
 ```
 
 - Import must validate data with Zod before merge
-- Export must include all local topics and cards
+- Export must include all local decks and cards
 
 ## Review Engine Requirements
 

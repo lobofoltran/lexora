@@ -4,10 +4,10 @@ Lexora is an offline-first flashcard platform (Anki-style core) built with Next.
 
 ## Features
 
-- Topic CRUD
+- Deck CRUD
 - Markdown flashcards (front/back)
 - SM2-lite review scheduling (`hard`, `normal`, `easy`)
-- Due-card review queue by topic
+- Due-card review queue by deck
 - Local persistence with Zustand + localForage (IndexedDB)
 - JSON export/import merge
 - No backend, no API routes, no server actions
@@ -69,7 +69,7 @@ Export/import file shape:
 
 ```json
 {
-  "topics": [],
+  "decks": [],
   "cards": []
 }
 ```
