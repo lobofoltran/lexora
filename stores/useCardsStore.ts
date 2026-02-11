@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { STORE_KEYS, zustandStorage } from "@/lib/storage";
+import { scheduleMutationAutoSync } from "@/lib/sync/auto-sync";
 import {
   applyReviewGrade,
   type ReviewGrade,
@@ -70,6 +71,7 @@ export const useCardsStore = create<CardsStore>()(
         });
 
         set({ cards: [...get().cards, card] });
+        scheduleMutationAutoSync();
         return card;
       },
       updateCard: ({ id, front, back }) => {
@@ -89,12 +91,15 @@ export const useCardsStore = create<CardsStore>()(
             });
           }),
         });
+        scheduleMutationAutoSync();
       },
       deleteCard: (id) => {
         set({ cards: get().cards.filter((card) => card.id !== id) });
+        scheduleMutationAutoSync();
       },
       deleteCardsByDeck: (deckId) => {
         set({ cards: get().cards.filter((card) => card.deckId !== deckId) });
+        scheduleMutationAutoSync();
       },
       reviewCard: (id, grade) => {
         const target = get().cards.find((card) => card.id === id);
