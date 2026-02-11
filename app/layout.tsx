@@ -1,7 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { AppHeader } from "@/components/app-header";
+import { PwaRegister } from "@/components/pwa/pwa-register";
+import { SyncBootstrap } from "@/components/sync/SyncBootstrap";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
 
@@ -19,8 +21,34 @@ const geistMono = Geist_Mono({
 
 
 export const metadata: Metadata = {
-  title: "Lexora",
+  title: "Anki",
   description: "Offline-first flashcards and spaced repetition",
+  applicationName: "Anki",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Anki",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      {
+        url: "/icons/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+    shortcut: ["/icons/icon-192.png"],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f172a",
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({
@@ -40,6 +68,8 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <div className="flex min-h-screen flex-col">
+            <PwaRegister />
+            <SyncBootstrap />
             <AppHeader />
             <main className="mx-auto w-full max-w-6xl flex-1">{children}</main>
           </div>
