@@ -17,7 +17,7 @@ let tokenState: TokenState | null = null;
 let gisLoadPromise: Promise<void> | null = null;
 
 function readClientId(): string {
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim();
+  const clientId = "1055249112669-998re73d1jd2gih084afmc3chr12io3e.apps.googleusercontent.com";// process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim();
 
   if (!clientId) {
     throw createDriveSyncError({

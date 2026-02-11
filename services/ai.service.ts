@@ -1,6 +1,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { z } from "zod";
 
+import { buildPrompt } from "@/flashcards/application/buildPrompt";
+import type {
+  FlashcardGenerationInput,
+  FlashcardStyle,
+} from "@/flashcards/domain/FlashcardGenerationInput";
+
 export const aiFlashcardSchema = z.object({
   front: z.string().trim().min(1),
   back: z.string().trim().min(1),
@@ -27,123 +33,43 @@ export class AIServiceError extends Error {
   }
 }
 
-function buildPrompt(words: string[], style: string): string {
-  return [
-    "SYSTEM ROLE:",
-    "You are an expert English teacher, linguist, and technical educator.",
-    "You generate advanced flashcards optimized for deep learning and spaced repetition systems.",
+const FLASHCARD_STYLES: ReadonlySet<FlashcardStyle> = new Set([
+  "academic",
+  "technical",
+  "casual",
+  "executive",
+  "interview_preparation",
+  "documentation",
+]);
 
-    "OBJECTIVE:",
-    "Create rich, information-dense flashcards that teach meaning, usage, context, and nuance — not just definitions.",
+function mapLegacyStyle(style: string): FlashcardStyle {
+  const normalized = style.trim().toLowerCase();
 
-    "OUTPUT CONTRACT (STRICT):",
-    "- Return ONLY a valid JSON array.",
-    "- No markdown code fences.",
-    "- No commentary outside JSON.",
-    "- No trailing commas.",
-    "- Each item must contain EXACTLY two fields:",
-    '  • \"front\"',
-    '  • \"back\"',
+  if (FLASHCARD_STYLES.has(normalized as FlashcardStyle)) {
+    return normalized as FlashcardStyle;
+  }
 
-    "FIELD FORMAT:",
-    "- Both fields must be Markdown strings.",
-    "- Preserve JSON validity.",
+  if (normalized.includes("tech")) {
+    return "technical";
+  }
 
-    "FRONT RULES (STRICT):",
-    "- Must ALWAYS be a question.",
-    "- Must start with:",
-    "    • 'What is' (singular)",
-    "    • 'What are' (plural)",
-    "- Format strictly:",
-    "    'What is <term>?'",
-    "- No hints, translations, or phonetics.",
+  if (normalized.includes("phrasal") || normalized.includes("casual")) {
+    return "casual";
+  }
 
-    "PLURALIZATION:",
-    "- Use 'What are' for plural or plural-uncountable concepts.",
-    "- Example: 'What are microservices?'",
+  if (normalized.includes("interview")) {
+    return "interview_preparation";
+  }
 
-    "BACK RULES — ROBUST STRUCTURE (MANDATORY):",
-    "The back MUST contain ALL sections below, using bullet points.",
+  if (normalized.includes("doc")) {
+    return "documentation";
+  }
 
-    "",
-    "1) Meaning",
-    "   - Clear definition.",
-    "   - Up to 2 sentences.",
-    "   - No circular explanations.",
-    "",
-    "2) Detailed Explanation",
-    "   - Expand the concept.",
-    "   - How / why it is used.",
-    "   - Practical interpretation.",
-    "",
-    "3) Example",
-    "   - One realistic sentence.",
-    "   - Professional or daily context.",
-    "   - Highlight the term in **bold**.",
-    "",
-    "4) Synonyms or Related Terms",
-    "   - 2–4 items.",
-    "   - Only if applicable.",
-    "",
-    "5) Contrast / Common Confusion",
-    "   - Explain what it is NOT.",
-    "   - Differentiate from similar terms.",
-    "",
-    "6) Technical / Real-World Usage",
-    "   - Prefer workplace, software, or academic scenarios.",
-    "   - Especially for IT/business terms.",
-    "",
-    "7) Memory Tip",
-    "   - Mnemonic, association, or mental model.",
-    "   - Help retention.",
+  if (normalized.includes("exec")) {
+    return "executive";
+  }
 
-    "",
-    "MARKDOWN FORMAT TEMPLATE:",
-    "- Meaning: ...",
-    "- Detailed Explanation: ...",
-    "- Example: ...",
-    "- Synonyms or Related Terms: ...",
-    "- Contrast / Common Confusion: ...",
-    "- Technical / Real-World Usage: ...",
-    "- Memory Tip: ...",
-
-    "",
-    "STYLE GUIDELINES:",
-    "- Educational and precise.",
-    "- Concise but information-rich.",
-    "- Avoid slang unless style requires.",
-    "- Maintain technical accuracy.",
-
-    "STYLE CATEGORY:",
-    style,
-
-    "TERM HANDLING RULES:",
-    "- Preserve original casing.",
-    "- Do not translate.",
-    "- Expand acronyms.",
-    "- Respect domain context.",
-
-    "WORDS / TERMS INPUT:",
-    ...words.map((w, i) => `${i + 1}. ${w}`),
-
-    "",
-    "OUTPUT SHAPE EXAMPLE (REFERENCE ONLY):",
-    `[{
-  "front": "What is Docker?",
-  "back": "- Meaning: A containerization platform that packages applications and dependencies together.\\n- Detailed Explanation: Docker allows software to run consistently across environments by isolating it in containers.\\n- Example: We deployed the API using **Docker** to ensure environment consistency.\\n- Synonyms or Related Terms: Containers, Kubernetes, Virtualization.\\n- Contrast / Common Confusion: Unlike virtual machines, Docker containers share the host OS kernel.\\n- Technical / Real-World Usage: Widely used in CI/CD pipelines and microservices deployment.\\n- Memory Tip: Think of Docker as a \"shipping container\" for software."
-}]`,
-
-    "",
-    "FINAL VALIDATION CHECKLIST:",
-    "- Valid JSON array?",
-    "- Two fields only?",
-    "- Front is a question?",
-    "- All back sections present?",
-    "- Markdown bullets used?",
-    "- English only?",
-
-    "If any rule fails, regenerate before answering."
-  ].join("\n");
+  return "academic";
 }
 
 function extractJsonArray(raw: string): string {
@@ -198,6 +124,7 @@ function normalizeServiceError(error: unknown): AIServiceError {
 export async function generateFlashcards(
   words: string[],
   style: string,
+  options?: Omit<FlashcardGenerationInput, "words" | "style">,
 ): Promise<AIGeneratedFlashcard[]> {
   const apiKey = "AIzaSyDi6-UDVjGjGePxwdvNSHfhsnbW_HyjkkA";
 
@@ -216,7 +143,11 @@ export async function generateFlashcards(
 
   const client = new GoogleGenerativeAI(apiKey);
   const model = client.getGenerativeModel({ model: "gemini-3-flash-preview" });
-  const prompt = buildPrompt(cleanWords, style);
+  const prompt = buildPrompt({
+    words: cleanWords,
+    style: mapLegacyStyle(style),
+    ...options,
+  });
 
   try {
     const response = await model.generateContent(prompt);
