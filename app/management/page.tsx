@@ -39,6 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useAiDraftSessionsStore } from "@/stores/useAiDraftSessionsStore";
 import { useCardsStore } from "@/stores/useCardsStore";
 import { useDecksStore } from "@/stores/useDecksStore";
 
@@ -52,6 +53,7 @@ export default function DeckPage() {
   const cards = useCardsStore((state) => state.cards);
   const cardsHydrated = useCardsStore((state) => state.hasHydrated);
   const deleteCardsByDeck = useCardsStore((state) => state.deleteCardsByDeck);
+  const clearDeckSession = useAiDraftSessionsStore((state) => state.clearDeckSession);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
@@ -116,6 +118,7 @@ export default function DeckPage() {
 
     deleteDeck(deleteTargetId);
     deleteCardsByDeck(deleteTargetId);
+    clearDeckSession(deleteTargetId);
     setDeleteOpen(false);
     setDeleteTargetId(null);
   };
