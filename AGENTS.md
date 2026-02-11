@@ -1,4 +1,4 @@
-# Lexora Agent Rules
+# Anki Agent Rules
 
 ## Product Constraints
 
@@ -40,3 +40,10 @@
 - Keep SM2-lite logic in `src/services/review.service.ts`
 - Supported grades: `hard`, `normal`, `easy`
 - Review updates must set interval, repetitions, ease factor, due date, and timestamps
+
+## Drive Sync Mutation Triggers
+
+- Auto-sync mutation triggers must run on card create, edit, delete, and batch/AI card creation paths.
+- Mutation auto-sync must debounce for 5 seconds.
+- Review completion must trigger immediate sync (`onReviewFinished` path).
+- Offline attempts must mark pending changes and retry on reconnect (`online` event).
