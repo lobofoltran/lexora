@@ -17,7 +17,7 @@ export function exportDataAsJson(data: FlashcardData): string {
   return JSON.stringify(flashcardDataSchema.parse(data), null, 2);
 }
 
-export function downloadJson(data: FlashcardData, fileName = "lexora-export.json"): void {
+export function downloadJson(data: FlashcardData, fileName = "anki-export.json"): void {
   const json = exportDataAsJson(data);
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
