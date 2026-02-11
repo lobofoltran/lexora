@@ -2,7 +2,7 @@
 
 ## Offline-First
 
-Lexora is a client-only application:
+Anki is a client-only application:
 
 - No API routes
 - No route handlers
@@ -10,6 +10,14 @@ Lexora is a client-only application:
 - No backend services
 
 The app is exported statically (`output: "export"`) and runs entirely in the browser.
+
+PWA runtime pieces:
+
+- Manifest: `public/manifest.webmanifest`
+- Service worker: `public/sw.js`
+- Offline fallback: `public/offline.html`
+
+The service worker caches the app shell, static assets, and navigation responses to keep core routes available offline.
 
 ## Storage Model
 
@@ -65,10 +73,38 @@ Primary routes:
 - `/review`: deck-level due overview
 - `/review/deck?deckId=...`: due queue and grading flow
 - `/management`: deck CRUD
-- `/management/deck?id=...`: per-deck card management and bulk creation
+- `/management/deck?id=...`: per-deck decks management and bulk creation
 
 Shared layout includes a navigation header with:
 
 - Review link
-- Card Management link
-- Data actions: export/import/reset
+- Decks link
+- Sync dropdown actions: sign-in/out, sync now, force download/upload, backup import/export
+
+## Drive Sync Lifecycle
+
+Anki syncs through Google Drive (`drive.file` scope) with a single file:
+
+- `anki-sync.json`
+- MIME: `application/json`
+
+### State Layers
+
+- `useDecksStore` and `useCardsStore`: IndexedDB persistence via localForage
+- `useSyncStore`: sync metadata in localStorage
+  - persisted: `lastSyncAt`, `lastSyncStatus`, `remoteFileId`, `pendingChanges`
+  - memory-only: `isAuthenticated`, `accessToken`
+
+### Trigger Flow
+
+- Card mutations call a debounced auto-sync scheduler (5 seconds)
+- Review completion calls immediate sync
+- App bootstrap runs startup sync when remote metadata exists and silent auth succeeds
+- Browser reconnect (`online` event) retries pending sync automatically
+
+### Merge Safety
+
+- Sync never blindly overwrites local cards
+- Merge deduplicates by card ID
+- Conflict resolution compares `updatedAt`; newest wins
+- Local cards are never auto-deleted by remote sync
