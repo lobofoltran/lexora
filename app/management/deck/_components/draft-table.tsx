@@ -51,68 +51,126 @@ export function DraftTable({
   const cellClassName = dense ? "p-1.5 align-top" : "p-2 align-top";
 
   return (
-    <ScrollArea className="h-[48vh] rounded-md border" aria-label="AI drafts table">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Front preview</TableHead>
-            <TableHead>Back preview</TableHead>
-            <TableHead>Tokens/length</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+    <>
+      <ScrollArea className="h-[48vh] rounded-md border sm:hidden" aria-label="AI drafts list">
+        <div className="space-y-2 p-2">
           {drafts.map((draft) => (
-            <TableRow key={draft.id}>
-              <TableCell className={cellClassName}>
+            <article key={draft.id} className="space-y-2 rounded-md border p-2">
+              <div className={metaClassName}>
+                <Badge variant="secondary">Draft</Badge>
+                <Badge variant="outline">{draft.style}</Badge>
+                <span className="text-muted-foreground">
+                  {format(new Date(draft.createdAt), "PPP 'at' HH:mm")}
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-[0.6875rem] uppercase">Front</p>
                 <p className={previewClassName}>{draft.front}</p>
-                <div className={metaClassName}>
-                  <Badge variant="secondary">Draft</Badge>
-                  <Badge variant="outline">{draft.style}</Badge>
-                  <span className="text-muted-foreground">
-                    {format(new Date(draft.createdAt), "PPP 'at' HH:mm")}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell className={cellClassName}>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-[0.6875rem] uppercase">Back</p>
                 <p className={previewClassName}>{draft.back}</p>
-              </TableCell>
-              <TableCell className={cellClassName}>
-                <code className="text-muted-foreground text-[0.6875rem]">
-                  {getLengthLabel(draft.front, draft.back)}
-                </code>
-              </TableCell>
-              <TableCell className={cellClassName}>
-                <div className="flex flex-wrap gap-1.5">
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    onClick={() => onEditDraft(draft.id)}
-                    aria-label="Edit draft"
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="xs"
-                    onClick={() => onApproveDraft(draft.id)}
-                    aria-label="Approve and create card"
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant="destructive"
-                    onClick={() => onDiscardDraft(draft.id)}
-                    aria-label="Discard draft"
-                  >
-                    Discard
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
+              </div>
+
+              <code className="text-muted-foreground block text-[0.6875rem]">
+                {getLengthLabel(draft.front, draft.back)}
+              </code>
+
+              <div className="grid grid-cols-3 gap-1.5">
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={() => onEditDraft(draft.id)}
+                  aria-label="Edit draft"
+                >
+                  Edit
+                </Button>
+                <Button
+                  size="xs"
+                  onClick={() => onApproveDraft(draft.id)}
+                  aria-label="Approve and create card"
+                >
+                  Approve
+                </Button>
+                <Button
+                  size="xs"
+                  variant="destructive"
+                  onClick={() => onDiscardDraft(draft.id)}
+                  aria-label="Discard draft"
+                >
+                  Discard
+                </Button>
+              </div>
+            </article>
           ))}
-        </TableBody>
-      </Table>
-    </ScrollArea>
+        </div>
+      </ScrollArea>
+
+      <ScrollArea className="hidden h-[48vh] rounded-md border sm:block" aria-label="AI drafts table">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Front preview</TableHead>
+              <TableHead>Back preview</TableHead>
+              <TableHead>Tokens/length</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {drafts.map((draft) => (
+              <TableRow key={draft.id}>
+                <TableCell className={cellClassName}>
+                  <p className={previewClassName}>{draft.front}</p>
+                  <div className={metaClassName}>
+                    <Badge variant="secondary">Draft</Badge>
+                    <Badge variant="outline">{draft.style}</Badge>
+                    <span className="text-muted-foreground">
+                      {format(new Date(draft.createdAt), "PPP 'at' HH:mm")}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className={cellClassName}>
+                  <p className={previewClassName}>{draft.back}</p>
+                </TableCell>
+                <TableCell className={cellClassName}>
+                  <code className="text-muted-foreground text-[0.6875rem]">
+                    {getLengthLabel(draft.front, draft.back)}
+                  </code>
+                </TableCell>
+                <TableCell className={cellClassName}>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      onClick={() => onEditDraft(draft.id)}
+                      aria-label="Edit draft"
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="xs"
+                      onClick={() => onApproveDraft(draft.id)}
+                      aria-label="Approve and create card"
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="destructive"
+                      onClick={() => onDiscardDraft(draft.id)}
+                      aria-label="Discard draft"
+                    >
+                      Discard
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </ScrollArea>
+    </>
   );
 }
