@@ -126,14 +126,6 @@ export async function generateFlashcards(
   style: string,
   options?: Omit<FlashcardGenerationInput, "words" | "style">,
 ): Promise<AIGeneratedFlashcard[]> {
-  const apiKey = "AIzaSyDi6-UDVjGjGePxwdvNSHfhsnbW_HyjkkA";
-
-  if (!apiKey) {
-    throw new AIServiceError(
-      "missing_api_key",
-      "Missing NEXT_PUBLIC_GEMINI_API_KEY environment variable.",
-    );
-  }
 
   const cleanWords = words.map((word) => word.trim()).filter(Boolean);
 
@@ -141,8 +133,6 @@ export async function generateFlashcards(
     return [];
   }
 
-  const client = new GoogleGenerativeAI(apiKey);
-  const model = client.getGenerativeModel({ model: "gemini-3-flash-preview" });
   const prompt = buildPrompt({
     words: cleanWords,
     style: mapLegacyStyle(style),
@@ -150,11 +140,40 @@ export async function generateFlashcards(
   });
 
   try {
-    const response = await model.generateContent(prompt);
-    const text = response.response.text()?.trim() ?? "";
+    const response = await fetch(
+      "https://gemini-worker.lobofoltran.dev/",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new AIServiceError(
+        "api_error",
+        `Worker request failed: ${response.status}`,
+      );
+    }
+
+    const data = await response.json();
+
+    const text =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
 
     if (!text) {
-      throw new AIServiceError("empty_response", "Gemini returned an empty response.");
+      throw new AIServiceError(
+        "empty_response",
+        "Gemini returned an empty response.",
+      );
     }
 
     let parsedJson: unknown;
@@ -162,7 +181,10 @@ export async function generateFlashcards(
     try {
       parsedJson = JSON.parse(extractJsonArray(text));
     } catch {
-      throw new AIServiceError("invalid_json", "Gemini returned invalid JSON.");
+      throw new AIServiceError(
+        "invalid_json",
+        "Gemini returned invalid JSON.",
+      );
     }
 
     const parsed = aiFlashcardsSchema.safeParse(parsedJson);
@@ -175,6 +197,7 @@ export async function generateFlashcards(
     }
 
     return parsed.data;
+
   } catch (error) {
     throw normalizeServiceError(error);
   }
